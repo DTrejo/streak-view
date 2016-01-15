@@ -17,5 +17,19 @@
     "jade": "1.11.0",
     "prompt": "0.2.14",
     "shelljs": "0.5.3"
-  }
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DTrejo/streak-view.git"
+  },
+  "keywords": [
+    "streak",
+    "pipeline",
+    "crm"
+  ],
+  "bugs": {
+    "url": "https://github.com/DTrejo/streak-view/issues"
+  },
+  "homepage": "https://github.com/DTrejo/streak-view"
 }
