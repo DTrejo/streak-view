@@ -1,0 +1,80 @@
+#!/usr/bin/env node
+
+var sh = require('shelljs')
+var prompt = require('prompt')
+var path = require('path')
+var stat = require('fs').statSync
+var parse = require('babyparse').parse
+var jade = require('jade')
+var http = require('http')
+var PORT = 9001
+
+var downloads = path.join(global.process.env.HOME, 'Downloads')
+
+// get the filename of the CSV
+// convert it to JSON
+// compile it to an html file using harp and index.jade
+// start an http server
+// open a browser tab to the newly created html page
+
+function getDefaultCSV() {
+  return sh.ls(downloads)
+  .map(function(f) { return path.join(downloads, f) })
+  .filter(function(f) { return path.extname(f) === '.csv' })
+  .sort(function(a, b) {
+    return stat(b).mtime - stat(a).mtime
+  })[0]
+}
+
+prompt.start()
+
+console.log('Drag and drop your exported streak pipeline CSV')
+console.log('(Defaults to newest CSV in %s)', downloads)
+var schema = {
+  properties: {
+    filename: {
+      default: getDefaultCSV()
+    }
+  }
+}
+prompt.get(schema, function (err, result) {
+  if (err) return console.log(new Error(err.message))
+  return process(result.filename)
+})
+
+function process(filename) {
+console.log('Processing', filename)
+  var csv = sh.cat(filename).trim()
+  var parsed = parse(csv, { header: true })
+  serve(parsed)
+}
+
+function serve(parsed) {
+  return http.createServer(function(req, res) {
+    console.log(parsed.data)
+    try {
+      return res.end(compile(parsed), 'ascii')
+    } catch (err) {
+      return res.end(
+        '<pre>'+err.message+'</pre><br><br>'
+        + '<pre>'+JSON.stringify(parsed, null, 2)+'</pre><br><br>'
+      , 'ascii'
+      )
+    }
+  }).listen(PORT, function(err) {
+    if (err) return console.log(new Error(err.message))
+    return sh.exec('open http://localhost:'+PORT)
+  })
+
+  function compile(parsed) {
+    console.log('Compiling jade & spreadsheet into html')
+    var index = sh.cat('./index.jade')
+    var options = {
+      pretty: true
+    , compileDebug: true
+    }
+    var render = jade.compile(index, options)
+    var html = render({ csv: parsed })
+    return html
+  }
+}

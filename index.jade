@@ -1,0 +1,73 @@
+doctype html
+html(lang="en")
+  head
+    title Streak View
+    link(rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.min.css")
+    style.
+      body {
+        margin-left: auto;
+        margin-right: auto;
+        width: 95%;
+      }
+      .multiline {
+        white-space: pre-wrap;
+        width: 15rem;
+      }
+      tr {
+        border-bottom: 1px solid gray;
+      }
+      td {
+        padding-right: 1rem;
+        padding-bottom: .5rem;
+        padding-top: .5rem;
+      }
+      td, tr {
+        text-align: left;
+        vertical-align: top;
+      }
+      .deal-size {
+        font-weight: bold;
+        color: green;
+        text-align: center;
+      }
+      .stage {
+        font-weight: bold;
+      }
+
+  body
+    if csv.errors.length > 0
+      pre.
+        #{JSON.stringify(csv.errors, null, 2)}
+
+    h1 Streak View
+    table
+      tr
+        each fieldname in csv.meta.fields
+          th(class=fieldname.toLowerCase().replace(/ /g, '-')) #{fieldname}
+      each row in csv.data
+        tr
+          each fieldname in csv.meta.fields
+            - var text = row[fieldname].trim()
+            td(class=fieldname.toLowerCase().replace(/ /g, '-'))
+              if fieldname == 'Notes'
+                .multiline: | #{text}
+              else if fieldname == 'Date of Last Email'
+                - var d = new Date(text)
+                - var day = d.getDay() + 1
+                - var month = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[d.getMonth()]
+                - var year = (d.getFullYear()+'').replace('20', '\'')
+                - if (text) var date = [month, day, year].join(' ')
+                .multiline: | #{date}
+              else if fieldname == 'Email Addresses'
+                - var emails = text.split(',')
+                - var base = "https://mail.google.com/mail/u/0/?shva=1#search/"
+                - var href = base + 'from%3A' + emails.map(encodeURIComponent).join('+OR+from%3A')
+                  a(href=href target="_blank"): | #{emails.join(', ')}
+              else
+                | #{text}
+    br
+    br
+    br
+    //- pre.
+      #{JSON.stringify(csv.data, null, 2)}
