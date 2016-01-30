@@ -1,6 +1,6 @@
 {
   "name": "streak-view",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "the simplest thing possible to make a better view of my pipeline",
   "main": "import.js",
   "scripts": {
