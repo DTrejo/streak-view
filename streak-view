@@ -68,7 +68,7 @@ function serve(parsed) {
 
   function compile(parsed) {
     console.log('Compiling jade & spreadsheet into html')
-    var index = sh.cat('./index.jade')
+    var index = sh.cat(path.join(__dirname, 'index.jade'))
     var options = {
       pretty: true
     , compileDebug: true
