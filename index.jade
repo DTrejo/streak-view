@@ -61,6 +61,9 @@ html(lang="en")
                 .multiline: | #{date}
               else if fieldname == 'Email Addresses'
                 - var emails = text.split(',')
+                - emails = emails.filter(function(e) {
+                -   return !(e === "david.daniel.trejo@gmail.com" || e === "tookie.trejo@gmail.com" || e === "david@dtrejo.com" || e === "david.d.trejo@gmail.com")
+                - })
                 - var base = "https://mail.google.com/mail/u/0/?shva=1#search/"
                 - var href = base + 'from%3A' + emails.map(encodeURIComponent).join('+OR+from%3A')
                   a(href=href target="_blank"): | #{emails.join(', ')}
