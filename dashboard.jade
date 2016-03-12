@@ -1,6 +1,10 @@
-- var isMyEmail = function (e) { e = e.toLowerCase(); return e === "david.daniel.trejo@gmail.com" || e === "tookie.trejo@gmail.com" || e === "david@dtrejo.com" || e === "david.d.trejo@gmail.com" }
-
-if csv.errors.length > 0
+- // this is set in the including HTML file.
+- // var isMyEmail = function (e) { return false }
+if !csv.errors
+  h2 Something went wrong
+  pre.
+    #{JSON.stringify(csv, null, 2)}
+else if csv.errors.length > 0
   h2 PapaParse CSV Error
   pre.
     #{JSON.stringify(csv.errors, null, 2)}
@@ -36,6 +40,10 @@ else
               - // var href = base + 'to%3A' + emails.map(encodeURIComponent).join('+OR+to%3A')
               - var href = base + emails.map(encodeURIComponent).join('+OR+')
                 a(href=href target="_blank"): | #{emails.join(', ')}
+                if Object.keys(window.replyMap).length
+                  br
+                  each message, nickname in window.replyMap
+                    a(href="#" data-message="#{message}"): | &#128203; #{nickname}
             else if fieldname == 'Stage' && row['Stage'].toLowerCase().indexOf('Lost') == -1
               - var lastEmailFrom = (row['Last Email From'] || '').trim()
               if lastEmailFrom && !isMyEmail(lastEmailFrom)
@@ -45,6 +53,3 @@ else
                 | #{text}
             else
               | #{text}
-br
-br
-br

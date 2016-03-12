@@ -55,61 +55,219 @@ html(lang="en")
         color: #444;
         font-size: 1rem;
       }
+      .container {
+        width: 36rem;
+        margin: 0 auto;
+      }
+      .box {
+        padding: .5rem 1rem;
+        background-color: lightyellow;
+        border: 1px solid gold;
+        margin-bottom: 1rem
+      }
+      .template {
+        display: none;
+      }
   body
-    h1 Streak View
-    :markdown
-      ## What is this?
-      This is an alternative dashboard for streak.com.
-      For me, it serves the following purposes (vs streak's built-in dashboard)
+    .container
+      h1 Streak View
+      :markdown
+        ## What is this?
+        This is an alternative dashboard for streak.com.
+        For me, it serves the following purposes (vs streak's built-in dashboard)
 
-      - Keeps me out of my inbox, because gmail is slow and distracting
-      - Tells me which of my prospects have replied to me, and need my attention*
-      - Makes it easy to handle prospects from oldest to newest, without losing my place
-      - One-click to open related email conversations
-      - Displays my notes in the dashboard, no click needed for show them
-      - ...in-progress...
-      - Keeps common replies only one copy-paste away
+        - Keeps me out of my inbox, because gmail is slow and distracting
+        - Tells me which of my prospects have replied to me, and need my attention*
+        - Makes it easy to handle prospects from oldest to newest, without losing my place
+        - One-click to open related email conversations
+        - Displays my notes in the dashboard, no click needed for show them
+        - ...in-progress...
+        - Keeps common replies only one copy-paste away
 
 
-      *To enable this (recommended), add the Magic column for "Last Email From."
+        *To enable this (recommended), add the Magic column for "Last Email From."
 
-    //- - ...in-progress...
-    //- - Optional: paste in your common replies, then click the link to copy them
-    //-   to your clipboard.
-    br
-    br
+      //- - ...in-progress...
+      //- - Optional: paste in your common replies, then click the link to copy them
+      //-   to your clipboard.
+      .box
+        label
+          | Enter a comma-separated list of emails you send from:
+          br
+          textarea#my-emails(placeholder="you@example.com, you2@example.com" style="width:100%")
 
-    form.dropzone#csv.needsclick(action="/404")
-      .dz-message.needsclick
-        | Drop CSV here or click to upload.
-        br
-        br
-        span.note.needsclick.
-          To find the CSV...
-          1) Click one of your streak pipelines
-          2) Click "more"
-          3) Click "Export Boxes to CSV"
-          4) Voila!
-          <br>
-          Selected CSV is <strong>not</strong> uploaded, it stays on your computer.
+      h3 Canned Replies <span style="font-size: .8rem">(keep these backed up somewhere else!)</span>
+      #replies
+        .reply.box.template
+          | Reply name:
+          input(placeholder="nickname")
+          |&nbsp;(no duplicates!)
+          br
+          | Reply:
+          br
+          textarea(placeholder="the contents of your reply" style="width:100%")
+          div(style="text-align:right")
+            button(class="del") X delete reply
+
+      br
+      br
+
+      form.dropzone#csv.needsclick(action="/404")
+        .dz-message.needsclick
+          | Drop CSV here or click to upload.
+          br
+          br
+          span.note.needsclick.
+            To find the CSV...
+            1) Click one of your streak pipelines
+            2) Click "more"
+            3) Click "Export Boxes to CSV"
+            4) Voila!
+            <br>
+            Selected CSV is <strong>not</strong> uploaded, it stays on your computer.
 
     #dashboard
       //- everything will go here.
-
+    br
+    br
+    br
     script
       != js
     script(src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.js")
     script(src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/4.1.2/papaparse.min.js")
     script(src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.min.js")
     script.
+      function storage(k, v) {
+        if (!window.localStorage) return
+
+        if (!v) return localStorage[k]
+        localStorage[k] = v
+        return v
+      }
+      function trim(s) { return s.trim() }
+      function toLowerCase(s) { return s.toLowerCase() }
+      function copyText(text) {
+        var ta = $('<textarea/>')
+        ta.text(text)
+        $('body').append(ta)
+        ta.select()
+        document.execCommand('copy', true)
+        ta.remove()
+      }
+    script.
       //- TODO:
       //- dont hardcode emails
       //- support canned reply links
       setupDropzone()
-      //- $(main)
-      //- function main() {
-      //-   console.log('main')
-      //- }
+      $(main)
+      function main() {
+        console.log('main')
+        restoreAndSetMyEmails()
+        restoreAndSetCannedReplies()
+      }
+      window.myEmails = []
+      window.isMyEmail = function(e) {
+        return myEmails.indexOf(e.toLowerCase()) > -1
+      }
+      function restoreAndSetMyEmails() {
+        var el = $('#my-emails')
+        el.on('blur', setMyEmails)
+        if (!el.val()) {
+          el.val(storage('my-emails'))
+          el.trigger('blur')
+        }
+        function setMyEmails() {
+          window.myEmails = el.val().split(',').map(trim).map(toLowerCase)
+          storage('my-emails', window.myEmails)
+          console.log('set my emails', window.myEmails)
+          refreshDashboard()
+        }
+      }
+      window.replies = null
+      window.replyMap = {}
+      function restoreAndSetCannedReplies() {
+        var container = $('#replies')
+        if (storage('replies')) {
+          window.replies = storage('replies')
+          container.html(window.replies)
+          createReplyMap()
+        }
+        ensureEmptyLastReply()
+
+        container.on('blur', 'input', onInputBlur)
+        container.on('blur', 'textarea', onTextareaBlur)
+        function onInputBlur(e) {
+          $(e.target).attr('value', $(e.target).val()) // put in dom so it will save
+          var replyEl = getReplyEl(e)
+          createReplyMap()
+          ensureEmptyLastReply()
+        }
+        function onTextareaBlur(e) {
+          //- console.log('ta', $(e.target).text(), $(e.target).val())
+          $(e.target).text($(e.target).val()) // put in dom so it will save
+          var replyEl = getReplyEl(e)
+          createReplyMap()
+          ensureEmptyLastReply()
+        }
+        container.on('click', 'button', onDelete)
+        function onDelete(e) {
+          var replyEl = $(e.target).parent().parent()
+          console.log('del')
+          replyEl.slideUp('fast', function(){
+            replyEl.remove()
+          })
+          createReplyMap()
+          ensureEmptyLastReply()
+        }
+        function getReplyEl(e) {
+          return $(e.target).parent()
+        }
+        function getNickname(replyEl) {
+          var el = replyEl.find('input')
+          return el.attr('value')
+        }
+        function getMessage(replyEl) {
+          var el = replyEl.find('textarea')
+          return el.text()
+        }
+        function saveReplyHTML() {
+          storage('replies', el.innerHTML())
+        }
+        function ensureEmptyLastReply() {
+          var replyEl = container.find('.reply.template').siblings().last()
+          console.log('ensureEmptyLastReply', getNickname(replyEl), getMessage(replyEl))
+          var hasReplies = replyEl.length > 0
+          var lastIsEmpty = !getNickname(replyEl) && !getMessage(replyEl)
+          if (hasReplies && lastIsEmpty) return
+          var empty = container
+            .find('.reply.template')
+            .clone()
+            .removeClass('template')
+          empty.hide()
+          container.append(empty)
+          empty.slideDown('fast')
+        }
+        function createReplyMap() {
+          window.replyMap = {}
+          container.find('.reply.template').siblings().map(function(i, replyEl) {
+            replyEl = $(replyEl)
+            var nickname = getNickname(replyEl)
+            var message = getMessage(replyEl)
+            if (!nickname) return
+            window.replyMap[nickname] = message
+          })
+          storage('replies', container.html())
+          refreshDashboard()
+        }
+      }
+
+      $('#dashboard').on('click', 'a[data-message]', function(e) {
+        copyText($(e.target).data('message'))
+        e.preventDefault()
+        e.stopPropagation()
+      })
+
+      //- CSV handling
       function setupDropzone() {
         var options =
         { paramName: "file"
@@ -134,6 +292,34 @@ html(lang="en")
       }
       function onParse(parsed) {
         console.log('onParse', parsed)
+        return refreshDashboard(parsed)
+      }
+      window.lastParsed = null
+      function refreshDashboard(parsed) {
+        if (!parsed && !window.lastParsed) return // no data yet
+        if (!parsed) parsed = window.lastParsed
+        window.lastParsed = parsed
         var dashboardHTML = renderDashboard({ csv: parsed })
         $('#dashboard').html(dashboardHTML)
       }
+  script.
+    $(function() {
+      $('body').on('keyup', 'textarea', function() { fixHeight(this) })
+      $('body').on('keyup', 'input', function(){ fixWidth(this) })
+      fixWidth('input')
+      fixHeight('textarea')
+    })
+    function fixWidth(sel) {
+      $(sel).each(function(){
+        var me = $(this)
+        if (!me.val()) return
+        var size = me.width(me.width(0)[0].scrollWidth);
+      })
+    }
+    function fixHeight(sel) {
+      $(sel).each(function(){
+        var me = $(this)
+        if (!me.val()) return
+        var size = me.height(me.height(0)[0].scrollHeight);
+      })
+    }
