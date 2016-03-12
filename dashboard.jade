@@ -1,0 +1,50 @@
+- var isMyEmail = function (e) { e = e.toLowerCase(); return e === "david.daniel.trejo@gmail.com" || e === "tookie.trejo@gmail.com" || e === "david@dtrejo.com" || e === "david.d.trejo@gmail.com" }
+
+if csv.errors.length > 0
+  h2 PapaParse CSV Error
+  pre.
+    #{JSON.stringify(csv.errors, null, 2)}
+  pre.
+    #{JSON.stringify(csv.data, null, 2)}
+else
+  //- ignore it. it seems a trailing newline on the file causes this.
+  p Parsed just fine
+  h2 Dashboard
+  table
+    tr
+      each fieldname in csv.meta.fields
+        th(class=fieldname.toLowerCase().replace(/ /g, '-')) #{fieldname}
+    each row in csv.data
+      tr
+        each fieldname in csv.meta.fields
+          - if (Object.keys(row).length < csv.meta.fields.length) continue
+          - var text = row[fieldname].trim()
+          td(class=fieldname.toLowerCase().replace(/ /g, '-'))
+            if fieldname == 'Notes'
+              .multiline: | #{text}
+            else if fieldname == 'Date of Last Email'
+              - var d = new Date(text)
+              - var day = d.getDay() + 1
+              - var month = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[d.getMonth()]
+              - var year = (d.getFullYear()+'').replace('20', '\'')
+              - if (text) var date = [month, day, year].join(' ')
+              .multiline: | #{date}
+            else if fieldname == 'Email Addresses'
+              - var emails = text.split(',')
+              - emails = emails.filter(function(e) { return !isMyEmail(e) })
+              - var base = "https://mail.google.com/mail/u/0/?shva=1#search/"
+              - // var href = base + 'to%3A' + emails.map(encodeURIComponent).join('+OR+to%3A')
+              - var href = base + emails.map(encodeURIComponent).join('+OR+')
+                a(href=href target="_blank"): | #{emails.join(', ')}
+            else if fieldname == 'Stage' && row['Stage'].toLowerCase().indexOf('Lost') == -1
+              - var lastEmailFrom = (row['Last Email From'] || '').trim()
+              if lastEmailFrom && !isMyEmail(lastEmailFrom)
+                | #{text}
+                .needs-reply replied
+              else
+                | #{text}
+            else
+              | #{text}
+br
+br
+br

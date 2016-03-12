@@ -1,0 +1,139 @@
+doctype html
+html(lang="en")
+  head
+    title Streak View
+    link(rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.min.css")
+    link(rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/basic.min.css")
+    link(rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/dropzone.css")
+    style.
+      body {
+        margin-left: auto;
+        margin-right: auto;
+        width: 95%;
+      }
+      .multiline {
+        white-space: pre-wrap;
+        width: 15rem;
+      }
+      tr {
+        border-bottom: 1px solid gray;
+      }
+      td {
+        padding-right: 1rem;
+        padding-bottom: .5rem;
+        padding-top: .5rem;
+      }
+      td, tr {
+        text-align: left;
+        vertical-align: top;
+      }
+      .deal-size {
+        font-weight: bold;
+        color: green;
+        text-align: center;
+      }
+      .stage {
+        font-weight: bold;
+      }
+      .needs-reply {
+        color: green;
+      }
+      .dropzone {
+        border: 2px dashed #0087F7;
+        border-radius: 5px;
+        background: lightyellow;
+      }
+      .dropzone .dz-message {
+        font-size: 1.5rem
+      }
+      .dropzone .dz-message .note {
+        display: block;
+        margin-top: 1.5rem;
+        color: #444;
+        font-size: 1rem;
+      }
+  body
+    h1 Streak View
+    :markdown
+      ## What is this?
+      This is an alternative dashboard for streak.com.
+      For me, it serves the following purposes (vs streak's built-in dashboard)
+
+      - Keeps me out of my inbox, because gmail is slow and distracting
+      - Tells me which of my prospects have replied to me, and need my attention*
+      - Makes it easy to handle prospects from oldest to newest, without losing my place
+      - One-click to open related email conversations
+      - Displays my notes in the dashboard, no click needed for show them
+      - ...in-progress...
+      - Keeps common replies only one copy-paste away
+
+
+      *To enable this (recommended), add the Magic column for "Last Email From."
+
+    //- - ...in-progress...
+    //- - Optional: paste in your common replies, then click the link to copy them
+    //-   to your clipboard.
+    br
+    br
+
+    form.dropzone#csv.needsclick(action="/404")
+      .dz-message.needsclick
+        | Drop CSV here or click to upload.
+        br
+        br
+        span.note.needsclick.
+          To find the CSV...
+          1) Click one of your streak pipelines
+          2) Click "more"
+          3) Click "Export Boxes to CSV"
+          4) Voila!
+          <br>
+          Selected CSV is <strong>not</strong> uploaded, it stays on your computer.
+
+    #dashboard
+      //- everything will go here.
+
+    script
+      != js
+    script(src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.js")
+    script(src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/4.1.2/papaparse.min.js")
+    script(src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.min.js")
+    script.
+      //- TODO:
+      //- dont hardcode emails
+      //- support canned reply links
+      setupDropzone()
+      //- $(main)
+      //- function main() {
+      //-   console.log('main')
+      //- }
+      function setupDropzone() {
+        var options =
+        { paramName: "file"
+        , maxFilesize: 2
+        , url: '/404'
+        , accept: accept
+        }
+        //- new Dropzone("div#csv", options)
+        Dropzone.options.csv = options
+      }
+      function accept(file, done) {
+        //- done('Got it.')
+        console.log('accept')
+        return Papa.parse(file, {
+          header: true
+        , complete: onParse
+        , skipEmptyLines: true,
+        })
+        //- if (file.name == "justinbieber.jpg") {
+        //-   done("Naha, you don't.");
+        //- } else { done(); }
+      }
+      function onParse(parsed) {
+        console.log('onParse', parsed)
+        var dashboardHTML = renderDashboard({ csv: parsed })
+        $('#dashboard').html(dashboardHTML)
+      }

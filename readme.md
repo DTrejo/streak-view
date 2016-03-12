@@ -18,9 +18,15 @@ Run
 ```sh
 npm install -g streak-view
 
+
 # export your streak pipeline to csv
 
 streak-view
 
 # follow the instructions
 ```
+
+### Wishlist features
+
+- Detects "who last emailed" column. If it wasn't you, highlights them for action from you
+- Streak magic column for contents of last email and second to last email. Shows this, and suggests what your next follow-up should be.

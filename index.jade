@@ -34,8 +34,11 @@ html(lang="en")
       .stage {
         font-weight: bold;
       }
-
+      .needs-reply {
+        color: green;
+      }
   body
+    - var isMyEmail = function (e) { e = e.toLowerCase(); return e === "david.daniel.trejo@gmail.com" || e === "tookie.trejo@gmail.com" || e === "david@dtrejo.com" || e === "david.d.trejo@gmail.com" }
     if csv.errors.length > 0
       pre.
         #{JSON.stringify(csv.errors, null, 2)}
@@ -61,12 +64,18 @@ html(lang="en")
                 .multiline: | #{date}
               else if fieldname == 'Email Addresses'
                 - var emails = text.split(',')
-                - emails = emails.filter(function(e) {
-                -   return !(e === "david.daniel.trejo@gmail.com" || e === "tookie.trejo@gmail.com" || e === "david@dtrejo.com" || e === "david.d.trejo@gmail.com")
-                - })
+                - emails = emails.filter(function(e) { return !isMyEmail(e) })
                 - var base = "https://mail.google.com/mail/u/0/?shva=1#search/"
-                - var href = base + 'from%3A' + emails.map(encodeURIComponent).join('+OR+from%3A')
+                - // var href = base + 'to%3A' + emails.map(encodeURIComponent).join('+OR+to%3A')
+                - var href = base + emails.map(encodeURIComponent).join('+OR+')
                   a(href=href target="_blank"): | #{emails.join(', ')}
+              else if fieldname == 'Stage' && row['Stage'].toLowerCase().indexOf('Lost') == -1
+                - var lastEmailFrom = (row['Last Email From'] || '').trim()
+                if lastEmailFrom && !isMyEmail(lastEmailFrom)
+                  | #{text}
+                  .needs-reply replied
+                else
+                  | #{text}
               else
                 | #{text}
     br
