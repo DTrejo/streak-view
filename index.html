@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Streak View</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/basic.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/dropzone.css">
+    <style>
+      body {
+        margin-left: auto;
+        margin-right: auto;
+        width: 95%;
+      }
+      .multiline {
+        white-space: pre-wrap;
+        width: 15rem;
+      }
+      tr {
+        border-bottom: 1px solid gray;
+      }
+      td {
+        padding-right: 1rem;
+        padding-bottom: .5rem;
+        padding-top: .5rem;
+      }
+      td, tr {
+        text-align: left;
+        vertical-align: top;
+      }
+      .deal-size {
+        font-weight: bold;
+        color: green;
+        text-align: center;
+      }
+      .stage {
+        font-weight: bold;
+      }
+      .needs-reply {
+        color: green;
+      }
+      .dropzone {
+        border: 2px dashed #0087F7;
+        border-radius: 5px;
+        background: lightyellow;
+      }
+      .dropzone .dz-message {
+        font-size: 1.5rem
+      }
+      .dropzone .dz-message .note {
+        display: block;
+        margin-top: 1.5rem;
+        color: #444;
+        font-size: 1rem;
+      }
+      .container {
+        width: 36rem;
+        margin: 0 auto;
+      }
+      .box {
+        padding: .5rem 1rem;
+        background-color: lightyellow;
+        border: 1px solid gold;
+        margin-bottom: 1rem
+      }
+      .template {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Streak View</h1><h2 id="what-is-this-">What is this?</h2>
+<p>This is an alternative dashboard for streak.com.
+For me, it serves the following purposes (vs streak&#39;s built-in dashboard)</p>
+<ul>
+<li>Keeps me out of my inbox, because gmail is slow and distracting</li>
+<li>Tells me which of my prospects have replied to me, and need my attention*</li>
+<li>Makes it easy to handle prospects from oldest to newest, without losing my place</li>
+<li>One-click to open related email conversations</li>
+<li>Displays my notes in the dashboard, no click needed for show them</li>
+<li>...in-progress...</li>
+<li>Keeps common replies only one copy-paste away</li>
+</ul>
+<p>*To enable this (recommended), add the Magic column for &quot;Last Email From.&quot;</p>
+
+      <div class="box">
+        <label>Enter a comma-separated list of emails you send from:<br>
+          <textarea id="my-emails" placeholder="you@example.com, you2@example.com" style="width:100%"></textarea>
+        </label>
+      </div>
+      <h3>Canned Replies <span style="font-size: .8rem">(keep these backed up somewhere else!)</span></h3>
+      <div id="replies">
+        <div class="reply box template">Reply name:
+          <input placeholder="nickname">&nbsp;(no duplicates!)<br>Reply:<br>
+          <textarea placeholder="the contents of your reply" style="width:100%"></textarea>
+          <div style="text-align:right">
+            <button class="del">X delete reply</button>
+          </div>
+        </div>
+      </div><br><br>
+      <form id="csv" action="/404" class="dropzone needsclick">
+        <div class="dz-message needsclick">Drop CSV here or click to upload.<br><br><span class="note needsclick">
+            To find the CSV...
+            1) Click one of your streak pipelines
+            2) Click "more"
+            3) Click "Export Boxes to CSV"
+            4) Voila!
+            <br>
+            Selected CSV is <strong>not</strong> uploaded, it stays on your computer.
+            </span></div>
+      </form>
+    </div>
+    <div id="dashboard">
+    </div><br><br><br>
+    <script>(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.jade = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+'use strict';
+
+/**
+ * Merge two attribute objects giving precedence
+ * to values in object `b`. Classes are special-cased
+ * allowing for arrays and merging/joining appropriately
+ * resulting in a string.
+ *
+ * @param {Object} a
+ * @param {Object} b
+ * @return {Object} a
+ * @api private
+ */
+
+exports.merge = function merge(a, b) {
+  if (arguments.length === 1) {
+    var attrs = a[0];
+    for (var i = 1; i < a.length; i++) {
+      attrs = merge(attrs, a[i]);
+    }
+    return attrs;
+  }
+  var ac = a['class'];
+  var bc = b['class'];
+
+  if (ac || bc) {
+    ac = ac || [];
+    bc = bc || [];
+    if (!Array.isArray(ac)) ac = [ac];
+    if (!Array.isArray(bc)) bc = [bc];
+    a['class'] = ac.concat(bc).filter(nulls);
+  }
+
+  for (var key in b) {
+    if (key != 'class') {
+      a[key] = b[key];
+    }
+  }
+
+  return a;
+};
+
+/**
+ * Filter null `val`s.
+ *
+ * @param {*} val
+ * @return {Boolean}
+ * @api private
+ */
+
+function nulls(val) {
+  return val != null && val !== '';
+}
+
+/**
+ * join array as classes.
+ *
+ * @param {*} val
+ * @return {String}
+ */
+exports.joinClasses = joinClasses;
+function joinClasses(val) {
+  return (Array.isArray(val) ? val.map(joinClasses) :
+    (val && typeof val === 'object') ? Object.keys(val).filter(function (key) { return val[key]; }) :
+    [val]).filter(nulls).join(' ');
+}
+
+/**
+ * Render the given classes.
+ *
+ * @param {Array} classes
+ * @param {Array.<Boolean>} escaped
+ * @return {String}
+ */
+exports.cls = function cls(classes, escaped) {
+  var buf = [];
+  for (var i = 0; i < classes.length; i++) {
+    if (escaped && escaped[i]) {
+      buf.push(exports.escape(joinClasses([classes[i]])));
+    } else {
+      buf.push(joinClasses(classes[i]));
+    }
+  }
+  var text = joinClasses(buf);
+  if (text.length) {
+    return ' class="' + text + '"';
+  } else {
+    return '';
+  }
+};
+
+
+exports.style = function (val) {
+  if (val && typeof val === 'object') {
+    return Object.keys(val).map(function (style) {
+      return style + ':' + val[style];
+    }).join(';');
+  } else {
+    return val;
+  }
+};
+/**
+ * Render the given attribute.
+ *
+ * @param {String} key
+ * @param {String} val
+ * @param {Boolean} escaped
+ * @param {Boolean} terse
+ * @return {String}
+ */
+exports.attr = function attr(key, val, escaped, terse) {
+  if (key === 'style') {
+    val = exports.style(val);
+  }
+  if ('boolean' == typeof val || null == val) {
+    if (val) {
+      return ' ' + (terse ? key : key + '="' + key + '"');
+    } else {
+      return '';
+    }
+  } else if (0 == key.indexOf('data') && 'string' != typeof val) {
+    if (JSON.stringify(val).indexOf('&') !== -1) {
+      console.warn('Since Jade 2.0.0, ampersands (`&`) in data attributes ' +
+                   'will be escaped to `&amp;`');
+    };
+    if (val && typeof val.toISOString === 'function') {
+      console.warn('Jade will eliminate the double quotes around dates in ' +
+                   'ISO form after 2.0.0');
+    }
+    return ' ' + key + "='" + JSON.stringify(val).replace(/'/g, '&apos;') + "'";
+  } else if (escaped) {
+    if (val && typeof val.toISOString === 'function') {
+      console.warn('Jade will stringify dates in ISO form after 2.0.0');
+    }
+    return ' ' + key + '="' + exports.escape(val) + '"';
+  } else {
+    if (val && typeof val.toISOString === 'function') {
+      console.warn('Jade will stringify dates in ISO form after 2.0.0');
+    }
+    return ' ' + key + '="' + val + '"';
+  }
+};
+
+/**
+ * Render the given attributes object.
+ *
+ * @param {Object} obj
+ * @param {Object} escaped
+ * @return {String}
+ */
+exports.attrs = function attrs(obj, terse){
+  var buf = [];
+
+  var keys = Object.keys(obj);
+
+  if (keys.length) {
+    for (var i = 0; i < keys.length; ++i) {
+      var key = keys[i]
+        , val = obj[key];
+
+      if ('class' == key) {
+        if (val = joinClasses(val)) {
+          buf.push(' ' + key + '="' + val + '"');
+        }
+      } else {
+        buf.push(exports.attr(key, val, false, terse));
+      }
+    }
+  }
+
+  return buf.join('');
+};
+
+/**
+ * Escape the given string of `html`.
+ *
+ * @param {String} html
+ * @return {String}
+ * @api private
+ */
+
+var jade_encode_html_rules = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;'
+};
+var jade_match_html = /[&<>"]/g;
+
+function jade_encode_char(c) {
+  return jade_encode_html_rules[c] || c;
+}
+
+exports.escape = jade_escape;
+function jade_escape(html){
+  var result = String(html).replace(jade_match_html, jade_encode_char);
+  if (result === '' + html) return html;
+  else return result;
+};
+
+/**
+ * Re-throw the given `err` in context to the
+ * the jade in `filename` at the given `lineno`.
+ *
+ * @param {Error} err
+ * @param {String} filename
+ * @param {String} lineno
+ * @api private
+ */
+
+exports.rethrow = function rethrow(err, filename, lineno, str){
+  if (!(err instanceof Error)) throw err;
+  if ((typeof window != 'undefined' || !filename) && !str) {
+    err.message += ' on line ' + lineno;
+    throw err;
+  }
+  try {
+    str = str || require('fs').readFileSync(filename, 'utf8')
+  } catch (ex) {
+    rethrow(err, null, lineno)
+  }
+  var context = 3
+    , lines = str.split('\n')
+    , start = Math.max(lineno - context, 0)
+    , end = Math.min(lines.length, lineno + context);
+
+  // Error context
+  var context = lines.slice(start, end).map(function(line, i){
+    var curr = i + start + 1;
+    return (curr == lineno ? '  > ' : '    ')
+      + curr
+      + '| '
+      + line;
+  }).join('\n');
+
+  // Alter exception message
+  err.path = filename;
+  err.message = (filename || 'Jade') + ':' + lineno
+    + '\n' + context + '\n\n' + err.message;
+  throw err;
+};
+
+exports.DebugItem = function DebugItem(lineno, filename) {
+  this.lineno = lineno;
+  this.filename = filename;
+}
+
+},{"fs":2}],2:[function(require,module,exports){
+
+},{}]},{},[1])(1)
+});;function renderDashboard(locals) {
+var jade_debug = [ new jade.DebugItem( 1, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ) ];
+try {
+var buf = [];
+var jade_mixins = {};
+var jade_interp;
+;var locals_for_with = (locals || {});(function (Date, JSON, Object, csv, encodeURIComponent, isMyEmail, undefined, window) {
+var jade_indent = [];
+jade_debug.unshift(new jade.DebugItem( 0, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 1, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+// this is set in the including HTML file.
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 2, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+// var isMyEmail = function (e) { return false }
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 3, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if ( !csv.errors)
+{
+jade_debug.unshift(new jade.DebugItem( 4, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 4, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n<h2>");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 4, jade_debug[0].filename ));
+buf.push("Something went wrong");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</h2>");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 5, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n<pre>");
+jade_debug.unshift(new jade.DebugItem( 6, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 6, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = JSON.stringify(csv, null, 2)) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</pre>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( csv.errors.length > 0)
+{
+jade_debug.unshift(new jade.DebugItem( 8, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 8, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n<h2>");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 8, jade_debug[0].filename ));
+buf.push("PapaParse CSV Error");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</h2>");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 9, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n<pre>");
+jade_debug.unshift(new jade.DebugItem( 10, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 10, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = JSON.stringify(csv.errors, null, 2)) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</pre>");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 11, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n<pre>");
+jade_debug.unshift(new jade.DebugItem( 12, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 12, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = JSON.stringify(csv.data, null, 2)) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</pre>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else
+{
+jade_debug.unshift(new jade.DebugItem( 14, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 15, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 15, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n<p>");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 15, jade_debug[0].filename ));
+buf.push("Parsed just fine");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</p>");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 16, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n<h2>");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 16, jade_debug[0].filename ));
+buf.push("Dashboard");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</h2>");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 17, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n<table>");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 18, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n  <tr>");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 19, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+// iterate csv.meta.fields
+;(function(){
+  var $$obj = csv.meta.fields;
+  if ('number' == typeof $$obj.length) {
+
+    for (var $index = 0, $$l = $$obj.length; $index < $$l; $index++) {
+      var fieldname = $$obj[$index];
+
+jade_debug.unshift(new jade.DebugItem( 19, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 20, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n    <th" + (jade.cls([fieldname.toLowerCase().replace(/ /g, '-')], [true])) + ">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 20, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = fieldname) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</th>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  } else {
+    var $$l = 0;
+    for (var $index in $$obj) {
+      $$l++;      var fieldname = $$obj[$index];
+
+jade_debug.unshift(new jade.DebugItem( 19, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 20, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n    <th" + (jade.cls([fieldname.toLowerCase().replace(/ /g, '-')], [true])) + ">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 20, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = fieldname) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</th>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  }
+}).call(this);
+
+jade_debug.shift();
+jade_debug.shift();
+buf.push("\n  </tr>");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 21, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+// iterate csv.data
+;(function(){
+  var $$obj = csv.data;
+  if ('number' == typeof $$obj.length) {
+
+    for (var $index = 0, $$l = $$obj.length; $index < $$l; $index++) {
+      var row = $$obj[$index];
+
+jade_debug.unshift(new jade.DebugItem( 21, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 22, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n  <tr>");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 23, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+// iterate csv.meta.fields
+;(function(){
+  var $$obj = csv.meta.fields;
+  if ('number' == typeof $$obj.length) {
+
+    for (var $index = 0, $$l = $$obj.length; $index < $$l; $index++) {
+      var fieldname = $$obj[$index];
+
+jade_debug.unshift(new jade.DebugItem( 23, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 24, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if (Object.keys(row).length < csv.meta.fields.length) continue
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 25, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var text = row[fieldname].trim()
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 26, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n    <td" + (jade.cls([fieldname.toLowerCase().replace(/ /g, '-')], [true])) + ">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 27, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if ( fieldname == 'Notes')
+{
+jade_debug.unshift(new jade.DebugItem( 28, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 28, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"multiline\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 28, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( fieldname == 'Date of Last Email')
+{
+jade_debug.unshift(new jade.DebugItem( 30, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 30, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var d = new Date(text)
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 31, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var day = d.getDay() + 1
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 32, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var month = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[d.getMonth()]
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 33, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var year = (d.getFullYear()+'').replace('20', '\'')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 34, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if (text) var date = [month, day, year].join(' ')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 35, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"multiline\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 35, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = date) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( fieldname == 'Email Addresses')
+{
+jade_debug.unshift(new jade.DebugItem( 37, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 37, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var emails = text.split(',')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 38, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+emails = emails.filter(function(e) { return !isMyEmail(e) })
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 39, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var base = "https://mail.google.com/mail/u/0/?shva=1#search/"
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 40, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+// var href = base + 'to%3A' + emails.map(encodeURIComponent).join('+OR+to%3A')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 41, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var href = base + emails.map(encodeURIComponent).join('+OR+')
+{
+jade_debug.unshift(new jade.DebugItem( 42, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 42, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<a" + (jade.attr("href", href, true, false)) + " target=\"_blank\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 42, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = emails.join(', ')) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</a>");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 43, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if ( Object.keys(window.replyMap).length)
+{
+jade_debug.unshift(new jade.DebugItem( 44, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 44, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<br/>");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 45, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+// iterate window.replyMap
+;(function(){
+  var $$obj = window.replyMap;
+  if ('number' == typeof $$obj.length) {
+
+    for (var nickname = 0, $$l = $$obj.length; nickname < $$l; nickname++) {
+      var message = $$obj[nickname];
+
+jade_debug.unshift(new jade.DebugItem( 45, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 46, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<a href=\"#\"" + (jade.attr("data-message", "" + (message) + "", true, false)) + ">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 46, jade_debug[0].filename ));
+buf.push("&#128203; " + (jade.escape((jade_interp = nickname) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</a>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  } else {
+    var $$l = 0;
+    for (var nickname in $$obj) {
+      $$l++;      var message = $$obj[nickname];
+
+jade_debug.unshift(new jade.DebugItem( 45, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 46, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<a href=\"#\"" + (jade.attr("data-message", "" + (message) + "", true, false)) + ">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 46, jade_debug[0].filename ));
+buf.push("&#128203; " + (jade.escape((jade_interp = nickname) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</a>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  }
+}).call(this);
+
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( fieldname == 'Stage' && row['Stage'].toLowerCase().indexOf('Lost') == -1)
+{
+jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var lastEmailFrom = (row['Last Email From'] || '').trim()
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 49, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if ( lastEmailFrom && !isMyEmail(lastEmailFrom))
+{
+jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 51, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"needs-reply\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 51, jade_debug[0].filename ));
+buf.push("replied");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else
+{
+jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+}
+else
+{
+jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+buf.push("\n    </td>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  } else {
+    var $$l = 0;
+    for (var $index in $$obj) {
+      $$l++;      var fieldname = $$obj[$index];
+
+jade_debug.unshift(new jade.DebugItem( 23, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 24, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if (Object.keys(row).length < csv.meta.fields.length) continue
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 25, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var text = row[fieldname].trim()
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 26, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n    <td" + (jade.cls([fieldname.toLowerCase().replace(/ /g, '-')], [true])) + ">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 27, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if ( fieldname == 'Notes')
+{
+jade_debug.unshift(new jade.DebugItem( 28, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 28, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"multiline\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 28, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( fieldname == 'Date of Last Email')
+{
+jade_debug.unshift(new jade.DebugItem( 30, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 30, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var d = new Date(text)
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 31, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var day = d.getDay() + 1
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 32, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var month = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[d.getMonth()]
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 33, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var year = (d.getFullYear()+'').replace('20', '\'')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 34, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if (text) var date = [month, day, year].join(' ')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 35, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"multiline\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 35, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = date) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( fieldname == 'Email Addresses')
+{
+jade_debug.unshift(new jade.DebugItem( 37, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 37, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var emails = text.split(',')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 38, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+emails = emails.filter(function(e) { return !isMyEmail(e) })
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 39, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var base = "https://mail.google.com/mail/u/0/?shva=1#search/"
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 40, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+// var href = base + 'to%3A' + emails.map(encodeURIComponent).join('+OR+to%3A')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 41, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var href = base + emails.map(encodeURIComponent).join('+OR+')
+{
+jade_debug.unshift(new jade.DebugItem( 42, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 42, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<a" + (jade.attr("href", href, true, false)) + " target=\"_blank\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 42, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = emails.join(', ')) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</a>");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 43, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if ( Object.keys(window.replyMap).length)
+{
+jade_debug.unshift(new jade.DebugItem( 44, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 44, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<br/>");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 45, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+// iterate window.replyMap
+;(function(){
+  var $$obj = window.replyMap;
+  if ('number' == typeof $$obj.length) {
+
+    for (var nickname = 0, $$l = $$obj.length; nickname < $$l; nickname++) {
+      var message = $$obj[nickname];
+
+jade_debug.unshift(new jade.DebugItem( 45, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 46, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<a href=\"#\"" + (jade.attr("data-message", "" + (message) + "", true, false)) + ">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 46, jade_debug[0].filename ));
+buf.push("&#128203; " + (jade.escape((jade_interp = nickname) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</a>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  } else {
+    var $$l = 0;
+    for (var nickname in $$obj) {
+      $$l++;      var message = $$obj[nickname];
+
+jade_debug.unshift(new jade.DebugItem( 45, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 46, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<a href=\"#\"" + (jade.attr("data-message", "" + (message) + "", true, false)) + ">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 46, jade_debug[0].filename ));
+buf.push("&#128203; " + (jade.escape((jade_interp = nickname) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</a>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  }
+}).call(this);
+
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( fieldname == 'Stage' && row['Stage'].toLowerCase().indexOf('Lost') == -1)
+{
+jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var lastEmailFrom = (row['Last Email From'] || '').trim()
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 49, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if ( lastEmailFrom && !isMyEmail(lastEmailFrom))
+{
+jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 51, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"needs-reply\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 51, jade_debug[0].filename ));
+buf.push("replied");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else
+{
+jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+}
+else
+{
+jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+buf.push("\n    </td>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  }
+}).call(this);
+
+jade_debug.shift();
+jade_debug.shift();
+buf.push("\n  </tr>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  } else {
+    var $$l = 0;
+    for (var $index in $$obj) {
+      $$l++;      var row = $$obj[$index];
+
+jade_debug.unshift(new jade.DebugItem( 21, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 22, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n  <tr>");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 23, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+// iterate csv.meta.fields
+;(function(){
+  var $$obj = csv.meta.fields;
+  if ('number' == typeof $$obj.length) {
+
+    for (var $index = 0, $$l = $$obj.length; $index < $$l; $index++) {
+      var fieldname = $$obj[$index];
+
+jade_debug.unshift(new jade.DebugItem( 23, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 24, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if (Object.keys(row).length < csv.meta.fields.length) continue
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 25, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var text = row[fieldname].trim()
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 26, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n    <td" + (jade.cls([fieldname.toLowerCase().replace(/ /g, '-')], [true])) + ">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 27, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if ( fieldname == 'Notes')
+{
+jade_debug.unshift(new jade.DebugItem( 28, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 28, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"multiline\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 28, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( fieldname == 'Date of Last Email')
+{
+jade_debug.unshift(new jade.DebugItem( 30, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 30, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var d = new Date(text)
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 31, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var day = d.getDay() + 1
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 32, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var month = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[d.getMonth()]
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 33, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var year = (d.getFullYear()+'').replace('20', '\'')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 34, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if (text) var date = [month, day, year].join(' ')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 35, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"multiline\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 35, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = date) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( fieldname == 'Email Addresses')
+{
+jade_debug.unshift(new jade.DebugItem( 37, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 37, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var emails = text.split(',')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 38, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+emails = emails.filter(function(e) { return !isMyEmail(e) })
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 39, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var base = "https://mail.google.com/mail/u/0/?shva=1#search/"
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 40, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+// var href = base + 'to%3A' + emails.map(encodeURIComponent).join('+OR+to%3A')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 41, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var href = base + emails.map(encodeURIComponent).join('+OR+')
+{
+jade_debug.unshift(new jade.DebugItem( 42, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 42, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<a" + (jade.attr("href", href, true, false)) + " target=\"_blank\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 42, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = emails.join(', ')) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</a>");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 43, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if ( Object.keys(window.replyMap).length)
+{
+jade_debug.unshift(new jade.DebugItem( 44, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 44, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<br/>");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 45, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+// iterate window.replyMap
+;(function(){
+  var $$obj = window.replyMap;
+  if ('number' == typeof $$obj.length) {
+
+    for (var nickname = 0, $$l = $$obj.length; nickname < $$l; nickname++) {
+      var message = $$obj[nickname];
+
+jade_debug.unshift(new jade.DebugItem( 45, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 46, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<a href=\"#\"" + (jade.attr("data-message", "" + (message) + "", true, false)) + ">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 46, jade_debug[0].filename ));
+buf.push("&#128203; " + (jade.escape((jade_interp = nickname) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</a>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  } else {
+    var $$l = 0;
+    for (var nickname in $$obj) {
+      $$l++;      var message = $$obj[nickname];
+
+jade_debug.unshift(new jade.DebugItem( 45, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 46, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<a href=\"#\"" + (jade.attr("data-message", "" + (message) + "", true, false)) + ">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 46, jade_debug[0].filename ));
+buf.push("&#128203; " + (jade.escape((jade_interp = nickname) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</a>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  }
+}).call(this);
+
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( fieldname == 'Stage' && row['Stage'].toLowerCase().indexOf('Lost') == -1)
+{
+jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var lastEmailFrom = (row['Last Email From'] || '').trim()
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 49, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if ( lastEmailFrom && !isMyEmail(lastEmailFrom))
+{
+jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 51, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"needs-reply\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 51, jade_debug[0].filename ));
+buf.push("replied");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else
+{
+jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+}
+else
+{
+jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+buf.push("\n    </td>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  } else {
+    var $$l = 0;
+    for (var $index in $$obj) {
+      $$l++;      var fieldname = $$obj[$index];
+
+jade_debug.unshift(new jade.DebugItem( 23, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 24, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if (Object.keys(row).length < csv.meta.fields.length) continue
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 25, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var text = row[fieldname].trim()
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 26, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n    <td" + (jade.cls([fieldname.toLowerCase().replace(/ /g, '-')], [true])) + ">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 27, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if ( fieldname == 'Notes')
+{
+jade_debug.unshift(new jade.DebugItem( 28, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 28, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"multiline\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 28, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( fieldname == 'Date of Last Email')
+{
+jade_debug.unshift(new jade.DebugItem( 30, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 30, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var d = new Date(text)
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 31, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var day = d.getDay() + 1
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 32, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var month = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[d.getMonth()]
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 33, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var year = (d.getFullYear()+'').replace('20', '\'')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 34, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if (text) var date = [month, day, year].join(' ')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 35, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"multiline\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 35, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = date) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( fieldname == 'Email Addresses')
+{
+jade_debug.unshift(new jade.DebugItem( 37, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 37, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var emails = text.split(',')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 38, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+emails = emails.filter(function(e) { return !isMyEmail(e) })
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 39, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var base = "https://mail.google.com/mail/u/0/?shva=1#search/"
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 40, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+// var href = base + 'to%3A' + emails.map(encodeURIComponent).join('+OR+to%3A')
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 41, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var href = base + emails.map(encodeURIComponent).join('+OR+')
+{
+jade_debug.unshift(new jade.DebugItem( 42, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 42, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<a" + (jade.attr("href", href, true, false)) + " target=\"_blank\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 42, jade_debug[0].filename ));
+buf.push("" + (jade.escape((jade_interp = emails.join(', ')) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</a>");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 43, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if ( Object.keys(window.replyMap).length)
+{
+jade_debug.unshift(new jade.DebugItem( 44, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 44, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<br/>");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 45, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+// iterate window.replyMap
+;(function(){
+  var $$obj = window.replyMap;
+  if ('number' == typeof $$obj.length) {
+
+    for (var nickname = 0, $$l = $$obj.length; nickname < $$l; nickname++) {
+      var message = $$obj[nickname];
+
+jade_debug.unshift(new jade.DebugItem( 45, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 46, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<a href=\"#\"" + (jade.attr("data-message", "" + (message) + "", true, false)) + ">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 46, jade_debug[0].filename ));
+buf.push("&#128203; " + (jade.escape((jade_interp = nickname) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</a>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  } else {
+    var $$l = 0;
+    for (var nickname in $$obj) {
+      $$l++;      var message = $$obj[nickname];
+
+jade_debug.unshift(new jade.DebugItem( 45, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 46, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("<a href=\"#\"" + (jade.attr("data-message", "" + (message) + "", true, false)) + ">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 46, jade_debug[0].filename ));
+buf.push("&#128203; " + (jade.escape((jade_interp = nickname) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</a>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  }
+}).call(this);
+
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( fieldname == 'Stage' && row['Stage'].toLowerCase().indexOf('Lost') == -1)
+{
+jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var lastEmailFrom = (row['Last Email From'] || '').trim()
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 49, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+if ( lastEmailFrom && !isMyEmail(lastEmailFrom))
+{
+jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 51, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"needs-reply\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 51, jade_debug[0].filename ));
+buf.push("replied");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else
+{
+jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+}
+else
+{
+jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();
+buf.push("\n    </td>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  }
+}).call(this);
+
+jade_debug.shift();
+jade_debug.shift();
+buf.push("\n  </tr>");
+jade_debug.shift();
+jade_debug.shift();
+    }
+
+  }
+}).call(this);
+
+jade_debug.shift();
+jade_debug.shift();
+buf.push("\n</table>");
+jade_debug.shift();
+jade_debug.shift();
+}
+jade_debug.shift();
+jade_debug.shift();}.call(this,"Date" in locals_for_with?locals_for_with.Date:typeof Date!=="undefined"?Date:undefined,"JSON" in locals_for_with?locals_for_with.JSON:typeof JSON!=="undefined"?JSON:undefined,"Object" in locals_for_with?locals_for_with.Object:typeof Object!=="undefined"?Object:undefined,"csv" in locals_for_with?locals_for_with.csv:typeof csv!=="undefined"?csv:undefined,"encodeURIComponent" in locals_for_with?locals_for_with.encodeURIComponent:typeof encodeURIComponent!=="undefined"?encodeURIComponent:undefined,"isMyEmail" in locals_for_with?locals_for_with.isMyEmail:typeof isMyEmail!=="undefined"?isMyEmail:undefined,"undefined" in locals_for_with?locals_for_with.undefined:typeof undefined!=="undefined"?undefined:undefined,"window" in locals_for_with?locals_for_with.window:typeof window!=="undefined"?window:undefined));;return buf.join("");
+} catch (err) {
+  jade.rethrow(err, jade_debug[0].filename, jade_debug[0].lineno, "- // this is set in the including HTML file.\n- // var isMyEmail = function (e) { return false }\nif !csv.errors\n  h2 Something went wrong\n  pre.\n    #{JSON.stringify(csv, null, 2)}\nelse if csv.errors.length > 0\n  h2 PapaParse CSV Error\n  pre.\n    #{JSON.stringify(csv.errors, null, 2)}\n  pre.\n    #{JSON.stringify(csv.data, null, 2)}\nelse\n  //- ignore it. it seems a trailing newline on the file causes this.\n  p Parsed just fine\n  h2 Dashboard\n  table\n    tr\n      each fieldname in csv.meta.fields\n        th(class=fieldname.toLowerCase().replace(/ /g, '-')) #{fieldname}\n    each row in csv.data\n      tr\n        each fieldname in csv.meta.fields\n          - if (Object.keys(row).length < csv.meta.fields.length) continue\n          - var text = row[fieldname].trim()\n          td(class=fieldname.toLowerCase().replace(/ /g, '-'))\n            if fieldname == 'Notes'\n              .multiline: | #{text}\n            else if fieldname == 'Date of Last Email'\n              - var d = new Date(text)\n              - var day = d.getDay() + 1\n              - var month = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[d.getMonth()]\n              - var year = (d.getFullYear()+'').replace('20', '\\'')\n              - if (text) var date = [month, day, year].join(' ')\n              .multiline: | #{date}\n            else if fieldname == 'Email Addresses'\n              - var emails = text.split(',')\n              - emails = emails.filter(function(e) { return !isMyEmail(e) })\n              - var base = \"https://mail.google.com/mail/u/0/?shva=1#search/\"\n              - // var href = base + 'to%3A' + emails.map(encodeURIComponent).join('+OR+to%3A')\n              - var href = base + emails.map(encodeURIComponent).join('+OR+')\n                a(href=href target=\"_blank\"): | #{emails.join(', ')}\n                if Object.keys(window.replyMap).length\n                  br\n                  each message, nickname in window.replyMap\n                    a(href=\"#\" data-message=\"#{message}\"): | &#128203; #{nickname}\n            else if fieldname == 'Stage' && row['Stage'].toLowerCase().indexOf('Lost') == -1\n              - var lastEmailFrom = (row['Last Email From'] || '').trim()\n              if lastEmailFrom && !isMyEmail(lastEmailFrom)\n                | #{text}\n                .needs-reply replied\n              else\n                | #{text}\n            else\n              | #{text}\n");
+}
+}
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/4.1.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.min.js"></script>
+    <script>
+      function storage(k, v) {
+        if (!window.localStorage) return
+      
+        if (!v) return localStorage[k]
+        localStorage[k] = v
+        return v
+      }
+      function trim(s) { return s.trim() }
+      function toLowerCase(s) { return s.toLowerCase() }
+      function copyText(text) {
+        var ta = $('<textarea/>')
+        ta.text(text)
+        $('body').append(ta)
+        ta.select()
+        document.execCommand('copy', true)
+        ta.remove()
+      }
+    </script>
+    <script>
+      //- TODO:
+      //- dont hardcode emails
+      //- support canned reply links
+      setupDropzone()
+      $(main)
+      function main() {
+        console.log('main')
+        restoreAndSetMyEmails()
+        restoreAndSetCannedReplies()
+      }
+      window.myEmails = []
+      window.isMyEmail = function(e) {
+        return myEmails.indexOf(e.toLowerCase()) > -1
+      }
+      function restoreAndSetMyEmails() {
+        var el = $('#my-emails')
+        el.on('blur', setMyEmails)
+        if (!el.val()) {
+          el.val(storage('my-emails'))
+          el.trigger('blur')
+        }
+        function setMyEmails() {
+          window.myEmails = el.val().split(',').map(trim).map(toLowerCase)
+          storage('my-emails', window.myEmails)
+          console.log('set my emails', window.myEmails)
+          refreshDashboard()
+        }
+      }
+      window.replies = null
+      window.replyMap = {}
+      function restoreAndSetCannedReplies() {
+        var container = $('#replies')
+        if (storage('replies')) {
+          window.replies = storage('replies')
+          container.html(window.replies)
+          createReplyMap()
+        }
+        ensureEmptyLastReply()
+      
+        container.on('blur', 'input', onInputBlur)
+        container.on('blur', 'textarea', onTextareaBlur)
+        function onInputBlur(e) {
+          $(e.target).attr('value', $(e.target).val()) // put in dom so it will save
+          var replyEl = getReplyEl(e)
+          createReplyMap()
+          ensureEmptyLastReply()
+        }
+        function onTextareaBlur(e) {
+          //- console.log('ta', $(e.target).text(), $(e.target).val())
+          $(e.target).text($(e.target).val()) // put in dom so it will save
+          var replyEl = getReplyEl(e)
+          createReplyMap()
+          ensureEmptyLastReply()
+        }
+        container.on('click', 'button', onDelete)
+        function onDelete(e) {
+          var replyEl = $(e.target).parent().parent()
+          console.log('del')
+          replyEl.slideUp('fast', function(){
+            replyEl.remove()
+          })
+          createReplyMap()
+          ensureEmptyLastReply()
+        }
+        function getReplyEl(e) {
+          return $(e.target).parent()
+        }
+        function getNickname(replyEl) {
+          var el = replyEl.find('input')
+          return el.attr('value')
+        }
+        function getMessage(replyEl) {
+          var el = replyEl.find('textarea')
+          return el.text()
+        }
+        function saveReplyHTML() {
+          storage('replies', el.innerHTML())
+        }
+        function ensureEmptyLastReply() {
+          var replyEl = container.find('.reply.template').siblings().last()
+          console.log('ensureEmptyLastReply', getNickname(replyEl), getMessage(replyEl))
+          var hasReplies = replyEl.length > 0
+          var lastIsEmpty = !getNickname(replyEl) && !getMessage(replyEl)
+          if (hasReplies && lastIsEmpty) return
+          var empty = container
+            .find('.reply.template')
+            .clone()
+            .removeClass('template')
+          empty.hide()
+          container.append(empty)
+          empty.slideDown('fast')
+        }
+        function createReplyMap() {
+          window.replyMap = {}
+          container.find('.reply.template').siblings().map(function(i, replyEl) {
+            replyEl = $(replyEl)
+            var nickname = getNickname(replyEl)
+            var message = getMessage(replyEl)
+            if (!nickname) return
+            window.replyMap[nickname] = message
+          })
+          storage('replies', container.html())
+          refreshDashboard()
+        }
+      }
+      
+      $('#dashboard').on('click', 'a[data-message]', function(e) {
+        copyText($(e.target).data('message'))
+        e.preventDefault()
+        e.stopPropagation()
+      })
+      
+      //- CSV handling
+      function setupDropzone() {
+        var options =
+        { paramName: "file"
+        , maxFilesize: 2
+        , url: '/404'
+        , accept: accept
+        }
+        //- new Dropzone("div#csv", options)
+        Dropzone.options.csv = options
+      }
+      function accept(file, done) {
+        //- done('Got it.')
+        console.log('accept')
+        return Papa.parse(file, {
+          header: true
+        , complete: onParse
+        , skipEmptyLines: true,
+        })
+        //- if (file.name == "justinbieber.jpg") {
+        //-   done("Naha, you don't.");
+        //- } else { done(); }
+      }
+      function onParse(parsed) {
+        console.log('onParse', parsed)
+        return refreshDashboard(parsed)
+      }
+      window.lastParsed = null
+      function refreshDashboard(parsed) {
+        if (!parsed && !window.lastParsed) return // no data yet
+        if (!parsed) parsed = window.lastParsed
+        window.lastParsed = parsed
+        var dashboardHTML = renderDashboard({ csv: parsed })
+        $('#dashboard').html(dashboardHTML)
+      }
+    </script>
+  </body>
+  <script>
+    $(function() {
+      $('body').on('keyup', 'textarea', function() { fixHeight(this) })
+      $('body').on('keyup', 'input', function(){ fixWidth(this) })
+      fixWidth('input')
+      fixHeight('textarea')
+    })
+    function fixWidth(sel) {
+      $(sel).each(function(){
+        var me = $(this)
+        if (!me.val()) return
+        var size = me.width(me.width(0)[0].scrollWidth);
+      })
+    }
+    function fixHeight(sel) {
+      $(sel).each(function(){
+        var me = $(this)
+        if (!me.val()) return
+        var size = me.height(me.height(0)[0].scrollHeight);
+      })
+    }
+  </script>
+</html>
