@@ -43,7 +43,12 @@ else
                 if Object.keys(window.replyMap).length
                   br
                   each message, nickname in window.replyMap
-                    a(href="#" data-message="#{message}"): | &#128203; #{nickname}
+                    - var prospectName = row['Name']
+                    - if (prospectName && message.indexOf('{{firstname}}')) {
+                    -   var firstname = prospectName.substring(0, prospectName.indexOf(' '))
+                    -   message = message.replace('{{firstname}}', firstname)
+                    - }
+                    a(href="#" data-message="#{message}" title="#{message}"): | &#128203; #{nickname}
             else if fieldname == 'Stage' && row['Stage'].toLowerCase().indexOf('Lost') == -1
               - var lastEmailFrom = (row['Last Email From'] || '').trim()
               if lastEmailFrom && !isMyEmail(lastEmailFrom)
