@@ -44,7 +44,7 @@ else
                   br
                   each message, nickname in window.replyMap
                     - var prospectName = row['Name']
-                    - if (prospectName && message.indexOf('{{firstname}}')) {
+                    - if (prospectName && message.indexOf('{{firstname}}') > -1) {
                     -   var firstname = prospectName.substring(0, prospectName.indexOf(' '))
                     -   message = message.replace('{{firstname}}', firstname)
                     - }

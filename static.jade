@@ -83,10 +83,9 @@ html(lang="en")
         - One-click to open related email conversations
         - Displays my notes in the dashboard, no click needed to show them
         - Keeps common replies only one copy-paste away
-        - Copy-pasted canned replies will automatically replace {{firstname}} with the prospect's name
+        - Copy-pasted canned replies will automatically replace {{firstname}} with the prospect's first name
         - ...in-progress...
-        - Once streak enables export of the last two emails (if ever): automatic suggested canned replies
-
+        - Once streak enables export of the last one or two emails (if ever): automatic suggested canned replies
 
         *To enable this (recommended), add the Magic column for "Last Email From."
 
@@ -301,6 +300,7 @@ html(lang="en")
       function refreshDashboard(parsed) {
         if (!parsed && !window.lastParsed) return // no data yet
         if (!parsed) parsed = window.lastParsed
+        console.log('refreshDashboard')
         window.lastParsed = parsed
         var dashboardHTML = renderDashboard({ csv: parsed })
         $('#dashboard').html(dashboardHTML)
