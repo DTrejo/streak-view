@@ -5,7 +5,8 @@
   "main": "import.js",
   "scripts": {
     "start": "rm index.html && runjs static.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "echo 'I hope you already ran npm start' && git push origin gh-pages:gh-pages"
   },
   "preferGlobal": true,
   "bin": {
