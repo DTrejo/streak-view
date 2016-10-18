@@ -39,6 +39,10 @@
       .needs-reply {
         color: green;
       }
+      .needs-followup {
+        color: #816c00;
+        color: gray;
+      }
       .dropzone {
         border: 2px dashed #0087F7;
         border-radius: 5px;
@@ -81,6 +85,7 @@ For me, it serves the following purposes (vs streak&#39;s built-in dashboard)</p
 <li>Displays my notes in the dashboard, no click needed to show them</li>
 <li>Keeps common replies only one copy-paste away</li>
 <li>Copy-pasted canned replies will automatically replace {{firstname}} with the prospect&#39;s first name</li>
+<li>Tells me who needs a follow-up, because I haven&#39;t emailed in 2 days</li>
 <li>...in-progress...</li>
 <li>Once streak enables export of the last one or two emails (if ever): automatic suggested canned replies</li>
 </ul>
@@ -567,7 +572,7 @@ jade_debug.unshift(new jade.DebugItem( 30, "/Users/dtrejo/Dropbox/dev/streak-vie
 var d = new Date(text)
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 31, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-var day = d.getDay() + 1
+var day = d.getDate()
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 32, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 var month = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[d.getMonth()]
@@ -644,7 +649,7 @@ jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-vie
 var firstname = prospectName.substring(0, prospectName.indexOf(' '))
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 49, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-message = message.replace('{{firstname}}', firstname)
+message = message.replace(/{{firstname}}/g, firstname)
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 }
@@ -677,7 +682,7 @@ jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-vie
 var firstname = prospectName.substring(0, prospectName.indexOf(' '))
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 49, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-message = message.replace('{{firstname}}', firstname)
+message = message.replace(/{{firstname}}/g, firstname)
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 }
@@ -706,24 +711,44 @@ jade_debug.shift();
 jade_debug.shift();
 jade_debug.shift();
 }
-else if ( fieldname == 'Stage' && row['Stage'].toLowerCase().indexOf('Lost') == -1)
+else if ( fieldname == 'Stage' && -1 == row['Stage'].toLowerCase().indexOf('Lost'))
 {
 jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 var lastEmailFrom = (row['Last Email From'] || '').trim()
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 54, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var dateOfLastEmail = row['Date of Last Email']
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 if ( lastEmailFrom && !isMyEmail(lastEmailFrom))
 {
-jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 56, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 56, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
 jade_debug.shift();
-jade_debug.unshift(new jade.DebugItem( 56, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 57, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("\n      <div class=\"needs-reply\">");
 jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
-jade_debug.unshift(new jade.DebugItem( 56, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 57, jade_debug[0].filename ));
 buf.push("replied");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( dateOfLastEmail && 1000*60*60*24*2 < Date.now() - new Date(dateOfLastEmail))
+{
+jade_debug.unshift(new jade.DebugItem( 59, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 59, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 60, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"needs-followup\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 60, jade_debug[0].filename ));
+buf.push("follow up");
 jade_debug.shift();
 jade_debug.shift();
 buf.push("</div>");
@@ -732,8 +757,8 @@ jade_debug.shift();
 }
 else
 {
-jade_debug.unshift(new jade.DebugItem( 58, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-jade_debug.unshift(new jade.DebugItem( 58, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 62, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 62, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
 jade_debug.shift();
 jade_debug.shift();
@@ -743,8 +768,8 @@ jade_debug.shift();
 }
 else
 {
-jade_debug.unshift(new jade.DebugItem( 60, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-jade_debug.unshift(new jade.DebugItem( 60, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 64, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 64, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
 jade_debug.shift();
 jade_debug.shift();
@@ -793,7 +818,7 @@ jade_debug.unshift(new jade.DebugItem( 30, "/Users/dtrejo/Dropbox/dev/streak-vie
 var d = new Date(text)
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 31, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-var day = d.getDay() + 1
+var day = d.getDate()
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 32, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 var month = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[d.getMonth()]
@@ -870,7 +895,7 @@ jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-vie
 var firstname = prospectName.substring(0, prospectName.indexOf(' '))
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 49, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-message = message.replace('{{firstname}}', firstname)
+message = message.replace(/{{firstname}}/g, firstname)
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 }
@@ -903,7 +928,7 @@ jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-vie
 var firstname = prospectName.substring(0, prospectName.indexOf(' '))
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 49, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-message = message.replace('{{firstname}}', firstname)
+message = message.replace(/{{firstname}}/g, firstname)
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 }
@@ -932,24 +957,44 @@ jade_debug.shift();
 jade_debug.shift();
 jade_debug.shift();
 }
-else if ( fieldname == 'Stage' && row['Stage'].toLowerCase().indexOf('Lost') == -1)
+else if ( fieldname == 'Stage' && -1 == row['Stage'].toLowerCase().indexOf('Lost'))
 {
 jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 var lastEmailFrom = (row['Last Email From'] || '').trim()
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 54, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var dateOfLastEmail = row['Date of Last Email']
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 if ( lastEmailFrom && !isMyEmail(lastEmailFrom))
 {
-jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 56, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 56, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
 jade_debug.shift();
-jade_debug.unshift(new jade.DebugItem( 56, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 57, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("\n      <div class=\"needs-reply\">");
 jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
-jade_debug.unshift(new jade.DebugItem( 56, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 57, jade_debug[0].filename ));
 buf.push("replied");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( dateOfLastEmail && 1000*60*60*24*2 < Date.now() - new Date(dateOfLastEmail))
+{
+jade_debug.unshift(new jade.DebugItem( 59, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 59, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 60, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"needs-followup\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 60, jade_debug[0].filename ));
+buf.push("follow up");
 jade_debug.shift();
 jade_debug.shift();
 buf.push("</div>");
@@ -958,8 +1003,8 @@ jade_debug.shift();
 }
 else
 {
-jade_debug.unshift(new jade.DebugItem( 58, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-jade_debug.unshift(new jade.DebugItem( 58, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 62, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 62, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
 jade_debug.shift();
 jade_debug.shift();
@@ -969,8 +1014,8 @@ jade_debug.shift();
 }
 else
 {
-jade_debug.unshift(new jade.DebugItem( 60, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-jade_debug.unshift(new jade.DebugItem( 60, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 64, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 64, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
 jade_debug.shift();
 jade_debug.shift();
@@ -1042,7 +1087,7 @@ jade_debug.unshift(new jade.DebugItem( 30, "/Users/dtrejo/Dropbox/dev/streak-vie
 var d = new Date(text)
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 31, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-var day = d.getDay() + 1
+var day = d.getDate()
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 32, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 var month = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[d.getMonth()]
@@ -1119,7 +1164,7 @@ jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-vie
 var firstname = prospectName.substring(0, prospectName.indexOf(' '))
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 49, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-message = message.replace('{{firstname}}', firstname)
+message = message.replace(/{{firstname}}/g, firstname)
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 }
@@ -1152,7 +1197,7 @@ jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-vie
 var firstname = prospectName.substring(0, prospectName.indexOf(' '))
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 49, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-message = message.replace('{{firstname}}', firstname)
+message = message.replace(/{{firstname}}/g, firstname)
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 }
@@ -1181,24 +1226,44 @@ jade_debug.shift();
 jade_debug.shift();
 jade_debug.shift();
 }
-else if ( fieldname == 'Stage' && row['Stage'].toLowerCase().indexOf('Lost') == -1)
+else if ( fieldname == 'Stage' && -1 == row['Stage'].toLowerCase().indexOf('Lost'))
 {
 jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 var lastEmailFrom = (row['Last Email From'] || '').trim()
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 54, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var dateOfLastEmail = row['Date of Last Email']
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 if ( lastEmailFrom && !isMyEmail(lastEmailFrom))
 {
-jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 56, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 56, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
 jade_debug.shift();
-jade_debug.unshift(new jade.DebugItem( 56, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 57, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("\n      <div class=\"needs-reply\">");
 jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
-jade_debug.unshift(new jade.DebugItem( 56, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 57, jade_debug[0].filename ));
 buf.push("replied");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( dateOfLastEmail && 1000*60*60*24*2 < Date.now() - new Date(dateOfLastEmail))
+{
+jade_debug.unshift(new jade.DebugItem( 59, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 59, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 60, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"needs-followup\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 60, jade_debug[0].filename ));
+buf.push("follow up");
 jade_debug.shift();
 jade_debug.shift();
 buf.push("</div>");
@@ -1207,8 +1272,8 @@ jade_debug.shift();
 }
 else
 {
-jade_debug.unshift(new jade.DebugItem( 58, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-jade_debug.unshift(new jade.DebugItem( 58, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 62, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 62, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
 jade_debug.shift();
 jade_debug.shift();
@@ -1218,8 +1283,8 @@ jade_debug.shift();
 }
 else
 {
-jade_debug.unshift(new jade.DebugItem( 60, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-jade_debug.unshift(new jade.DebugItem( 60, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 64, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 64, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
 jade_debug.shift();
 jade_debug.shift();
@@ -1268,7 +1333,7 @@ jade_debug.unshift(new jade.DebugItem( 30, "/Users/dtrejo/Dropbox/dev/streak-vie
 var d = new Date(text)
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 31, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-var day = d.getDay() + 1
+var day = d.getDate()
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 32, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 var month = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[d.getMonth()]
@@ -1345,7 +1410,7 @@ jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-vie
 var firstname = prospectName.substring(0, prospectName.indexOf(' '))
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 49, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-message = message.replace('{{firstname}}', firstname)
+message = message.replace(/{{firstname}}/g, firstname)
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 }
@@ -1378,7 +1443,7 @@ jade_debug.unshift(new jade.DebugItem( 48, "/Users/dtrejo/Dropbox/dev/streak-vie
 var firstname = prospectName.substring(0, prospectName.indexOf(' '))
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 49, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-message = message.replace('{{firstname}}', firstname)
+message = message.replace(/{{firstname}}/g, firstname)
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 50, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 }
@@ -1407,24 +1472,44 @@ jade_debug.shift();
 jade_debug.shift();
 jade_debug.shift();
 }
-else if ( fieldname == 'Stage' && row['Stage'].toLowerCase().indexOf('Lost') == -1)
+else if ( fieldname == 'Stage' && -1 == row['Stage'].toLowerCase().indexOf('Lost'))
 {
 jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 jade_debug.unshift(new jade.DebugItem( 53, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 var lastEmailFrom = (row['Last Email From'] || '').trim()
 jade_debug.shift();
 jade_debug.unshift(new jade.DebugItem( 54, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+var dateOfLastEmail = row['Date of Last Email']
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 if ( lastEmailFrom && !isMyEmail(lastEmailFrom))
 {
-jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-jade_debug.unshift(new jade.DebugItem( 55, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 56, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 56, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
 jade_debug.shift();
-jade_debug.unshift(new jade.DebugItem( 56, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 57, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("\n      <div class=\"needs-reply\">");
 jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
-jade_debug.unshift(new jade.DebugItem( 56, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 57, jade_debug[0].filename ));
 buf.push("replied");
+jade_debug.shift();
+jade_debug.shift();
+buf.push("</div>");
+jade_debug.shift();
+jade_debug.shift();
+}
+else if ( dateOfLastEmail && 1000*60*60*24*2 < Date.now() - new Date(dateOfLastEmail))
+{
+jade_debug.unshift(new jade.DebugItem( 59, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 59, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
+jade_debug.shift();
+jade_debug.unshift(new jade.DebugItem( 60, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+buf.push("\n      <div class=\"needs-followup\">");
+jade_debug.unshift(new jade.DebugItem( undefined, jade_debug[0].filename ));
+jade_debug.unshift(new jade.DebugItem( 60, jade_debug[0].filename ));
+buf.push("follow up");
 jade_debug.shift();
 jade_debug.shift();
 buf.push("</div>");
@@ -1433,8 +1518,8 @@ jade_debug.shift();
 }
 else
 {
-jade_debug.unshift(new jade.DebugItem( 58, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-jade_debug.unshift(new jade.DebugItem( 58, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 62, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 62, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
 jade_debug.shift();
 jade_debug.shift();
@@ -1444,8 +1529,8 @@ jade_debug.shift();
 }
 else
 {
-jade_debug.unshift(new jade.DebugItem( 60, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
-jade_debug.unshift(new jade.DebugItem( 60, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 64, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
+jade_debug.unshift(new jade.DebugItem( 64, "/Users/dtrejo/Dropbox/dev/streak-view/dashboard.jade" ));
 buf.push("" + (jade.escape((jade_interp = text) == null ? '' : jade_interp)) + "");
 jade_debug.shift();
 jade_debug.shift();
@@ -1479,7 +1564,7 @@ jade_debug.shift();
 jade_debug.shift();
 jade_debug.shift();}.call(this,"Date" in locals_for_with?locals_for_with.Date:typeof Date!=="undefined"?Date:undefined,"JSON" in locals_for_with?locals_for_with.JSON:typeof JSON!=="undefined"?JSON:undefined,"Object" in locals_for_with?locals_for_with.Object:typeof Object!=="undefined"?Object:undefined,"csv" in locals_for_with?locals_for_with.csv:typeof csv!=="undefined"?csv:undefined,"encodeURIComponent" in locals_for_with?locals_for_with.encodeURIComponent:typeof encodeURIComponent!=="undefined"?encodeURIComponent:undefined,"isMyEmail" in locals_for_with?locals_for_with.isMyEmail:typeof isMyEmail!=="undefined"?isMyEmail:undefined,"undefined" in locals_for_with?locals_for_with.undefined:typeof undefined!=="undefined"?undefined:undefined,"window" in locals_for_with?locals_for_with.window:typeof window!=="undefined"?window:undefined));;return buf.join("");
 } catch (err) {
-  jade.rethrow(err, jade_debug[0].filename, jade_debug[0].lineno, "- // this is set in the including HTML file.\n- // var isMyEmail = function (e) { return false }\nif !csv.errors\n  h2 Something went wrong\n  pre.\n    #{JSON.stringify(csv, null, 2)}\nelse if csv.errors.length > 0\n  h2 PapaParse CSV Error\n  pre.\n    #{JSON.stringify(csv.errors, null, 2)}\n  pre.\n    #{JSON.stringify(csv.data, null, 2)}\nelse\n  //- ignore it. it seems a trailing newline on the file causes this.\n  p Parsed just fine\n  h2 Dashboard\n  table\n    tr\n      each fieldname in csv.meta.fields\n        th(class=fieldname.toLowerCase().replace(/ /g, '-')) #{fieldname}\n    each row in csv.data\n      tr\n        each fieldname in csv.meta.fields\n          - if (Object.keys(row).length < csv.meta.fields.length) continue\n          - var text = row[fieldname].trim()\n          td(class=fieldname.toLowerCase().replace(/ /g, '-'))\n            if fieldname == 'Notes'\n              .multiline: | #{text}\n            else if fieldname == 'Date of Last Email'\n              - var d = new Date(text)\n              - var day = d.getDay() + 1\n              - var month = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[d.getMonth()]\n              - var year = (d.getFullYear()+'').replace('20', '\\'')\n              - if (text) var date = [month, day, year].join(' ')\n              .multiline: | #{date}\n            else if fieldname == 'Email Addresses'\n              - var emails = text.split(',')\n              - emails = emails.filter(function(e) { return !isMyEmail(e) })\n              - var base = \"https://mail.google.com/mail/u/0/?shva=1#search/\"\n              - // var href = base + 'to%3A' + emails.map(encodeURIComponent).join('+OR+to%3A')\n              - var href = base + emails.map(encodeURIComponent).join('+OR+')\n                a(href=href target=\"_blank\"): | #{emails.join(', ')}\n                if Object.keys(window.replyMap).length\n                  br\n                  each message, nickname in window.replyMap\n                    - var prospectName = row['Name']\n                    - if (prospectName && message.indexOf('{{firstname}}') > -1) {\n                    -   var firstname = prospectName.substring(0, prospectName.indexOf(' '))\n                    -   message = message.replace('{{firstname}}', firstname)\n                    - }\n                    a(href=\"#\" data-message=\"#{message}\" title=\"#{message}\"): | &#128203; #{nickname}\n            else if fieldname == 'Stage' && row['Stage'].toLowerCase().indexOf('Lost') == -1\n              - var lastEmailFrom = (row['Last Email From'] || '').trim()\n              if lastEmailFrom && !isMyEmail(lastEmailFrom)\n                | #{text}\n                .needs-reply replied\n              else\n                | #{text}\n            else\n              | #{text}\n");
+  jade.rethrow(err, jade_debug[0].filename, jade_debug[0].lineno, "- // this is set in the including HTML file.\n- // var isMyEmail = function (e) { return false }\nif !csv.errors\n  h2 Something went wrong\n  pre.\n    #{JSON.stringify(csv, null, 2)}\nelse if csv.errors.length > 0\n  h2 PapaParse CSV Error\n  pre.\n    #{JSON.stringify(csv.errors, null, 2)}\n  pre.\n    #{JSON.stringify(csv.data, null, 2)}\nelse\n  //- ignore it. it seems a trailing newline on the file causes this.\n  p Parsed just fine\n  h2 Dashboard\n  table\n    tr\n      each fieldname in csv.meta.fields\n        th(class=fieldname.toLowerCase().replace(/ /g, '-')) #{fieldname}\n    each row in csv.data\n      tr\n        each fieldname in csv.meta.fields\n          - if (Object.keys(row).length < csv.meta.fields.length) continue\n          - var text = row[fieldname].trim()\n          td(class=fieldname.toLowerCase().replace(/ /g, '-'))\n            if fieldname == 'Notes'\n              .multiline: | #{text}\n            else if fieldname == 'Date of Last Email'\n              - var d = new Date(text)\n              - var day = d.getDate()\n              - var month = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[d.getMonth()]\n              - var year = (d.getFullYear()+'').replace('20', '\\'')\n              - if (text) var date = [month, day, year].join(' ')\n              .multiline: | #{date}\n            else if fieldname == 'Email Addresses'\n              - var emails = text.split(',')\n              - emails = emails.filter(function(e) { return !isMyEmail(e) })\n              - var base = \"https://mail.google.com/mail/u/0/?shva=1#search/\"\n              - // var href = base + 'to%3A' + emails.map(encodeURIComponent).join('+OR+to%3A')\n              - var href = base + emails.map(encodeURIComponent).join('+OR+')\n                a(href=href target=\"_blank\"): | #{emails.join(', ')}\n                if Object.keys(window.replyMap).length\n                  br\n                  each message, nickname in window.replyMap\n                    - var prospectName = row['Name']\n                    - if (prospectName && message.indexOf('{{firstname}}') > -1) {\n                    -   var firstname = prospectName.substring(0, prospectName.indexOf(' '))\n                    -   message = message.replace(/{{firstname}}/g, firstname)\n                    - }\n                    a(href=\"#\" data-message=\"#{message}\" title=\"#{message}\"): | &#128203; #{nickname}\n            else if fieldname == 'Stage' && -1 == row['Stage'].toLowerCase().indexOf('Lost')\n              - var lastEmailFrom = (row['Last Email From'] || '').trim()\n              - var dateOfLastEmail = row['Date of Last Email']\n              if lastEmailFrom && !isMyEmail(lastEmailFrom)\n                | #{text}\n                .needs-reply replied\n              else if dateOfLastEmail && 1000*60*60*24*2 < Date.now() - new Date(dateOfLastEmail)\n                | #{text}\n                .needs-followup follow up\n              else\n                | #{text}\n            else\n              | #{text}\n");
 }
 }
     </script>
